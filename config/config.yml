@@ -1,0 +1,21 @@
+one:
+  folders:
+    - hello
+    - .venv
+  color: ff9922
+_home:
+  color: ae9eff
+_other_colors:
+  - cee1ff
+  - ffcece
+  - ffe5ce
+  - fffbce
+  - e4ffce
+  - ceffd2
+  - ceffef
+  - cef6ff
+  - cedcff
+  - d3ceff
+  - ebceff
+  - ffcefb
+  - ffcee7
