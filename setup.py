@@ -6,7 +6,8 @@ from setuptools import setup
 version = "0.0.0"
 
 requirements = [
-    "PyYAML==3.13.*"
+    "PyYAML==3.13.*",
+    "click==6.7",
 ]
 
 setup(

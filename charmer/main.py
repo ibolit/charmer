@@ -2,23 +2,23 @@
 import re
 from pathlib import Path
 import yaml
+import click
 
 
 class Charmer:
-    def __init__(self):
+    def __init__(self, config):
         self.config = None
         self.project = Project()
-        self.file_colors = None
+        self.file_colors = FileColors(self.project)
+        # self.file_colors = None
         self.predefined_patterns = None
-        self.parse_config()
+        self.parse_config(config)
 
 
-    def parse_config(self):
-        config_path = Path(__file__).parent / "config.yml"
-        with open(config_path) as infile:
+    def parse_config(self, config):
+        with open(config) as infile:
             self.config = yaml.load(infile)
 
-        self.file_colors = FileColors()
         self.predefined_patterns = self.get_predefined_patterns()
 
 
@@ -46,7 +46,6 @@ class Charmer:
                 scope = Scope(f.name, self.project)
                 scope.add_entry(f)
                 self.file_colors.add_color(colors[counter], for_scope=scope.name)
-                print("Scopes dir from make_scopes is {}".format(self.project.scopes_dir))
                 scope.write_scope()
                 counter += 1
                 counter = counter % len(colors)
@@ -63,7 +62,6 @@ class Charmer:
             for folder in definitions["folders"]:
                 scope.add_entry(folder)
                 self.file_colors.add_color(definitions["color"], for_scope=scope_name)
-            print("Scopes dir from make_predefined_scopes is {}".format(self.project.scopes_dir))
             scope.write_scope()
 
 
@@ -83,15 +81,13 @@ class Project:
             raise RuntimeError("Current directory is not a pycharm or idea project")
         self.name = self.get_project_name()
 
-        print("Project name is: {}".format(self.name))
         self.idea_dir = self.root / ".idea"
         self.scopes_dir = self.idea_dir / "scopes"
         self.scopes_dir.mkdir(exist_ok=True)
 
 
     def is_project(self):
-        for f in self.root.iterdir() :
-            print("f = {}, is_dir: {}".format(f, f.is_dir()))
+        for f in self.root.iterdir():
             if f.name == ".idea" and f.is_dir():
                 return True
         return False
@@ -100,12 +96,10 @@ class Project:
     def get_project_name(self):
         try:
             name_path = self.root / ".idea" / ".name"
-            print(name_path)
             with open(name_path) as name_file:
                 return name_file.read().strip()
         except FileNotFoundError:
             return self.root.name
-
 
 
 class Scope:
@@ -143,8 +137,6 @@ class Scope:
     def write_scope(self):
         scope_savable_name = re.sub("^\.", "_", self.name)
         scope_file_name = self.project.scopes_dir / "{}.xml".format(scope_savable_name)
-        # print("Scope file name ends up being: {}: savable: {}".format(scope_file_name, self.name))
-
         with open(scope_file_name, "w") as outfile:
             outfile.write(self.xml.format(
                 name=self.name, pattern="||".join(self.patterns)
@@ -164,7 +156,8 @@ class FileColors:
 
     colour_entry = '    <fileColor scope="{}" color="{}" />'
 
-    def __init__(self):
+    def __init__(self, project):
+        self.project = project
         self.colors = {}
 
 
@@ -172,8 +165,8 @@ class FileColors:
         self.colors[for_scope] = color
 
 
-    def write(self, dir):
-        with open(dir/"fileColors.xml", "w") as outfile:
+    def write(self):
+        with open(self.project.idea_dir/"fileColors.xml", "w") as outfile:
             outfile.write(FileColors.xml.format(
                 "\n".join([
                     FileColors.colour_entry.format(*x) for x in self.colors.items()
@@ -181,12 +174,18 @@ class FileColors:
             ))
 
 
-def main():
-    c = Charmer()
+@click.command(
+    "charmer",
+    help="Add colour to the files and folders in your PyCharm project "
+         "using the specified CONFIG"
+)
+@click.argument("config", type=click.Path())
+def main(config):
+    c = Charmer(config)
     c.make_predefined_scopes()
     c.make_scopes()
-    c.file_colors.write(c.project.idea_dir)
+    c.file_colors.write()
 
 
 if __name__ == "__main__":
-    main()
+    main("None")
