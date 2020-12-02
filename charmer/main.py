@@ -99,6 +99,9 @@ class Project:
     def etc(self, good):
         return good
 
+    def opt(self, three):
+        return three
+
     def get_project_name(self):
         try:
             name_path = self.root / ".idea" / ".name"
