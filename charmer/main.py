@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 from pathlib import Path
-import yaml
+from ruamel.yaml import YAML
 import click
 from xml.etree import ElementTree as et
 
@@ -108,15 +108,61 @@ class Project:
         return ret
 
     def parse_existing_colous(self):
+        ret = {}
         for file in self.iter_scope_files():
             xml = et.parse(file)
             root = xml.getroot()
             for element in root.findall('scope'):
                 print('name', element.attrib['name'])
+                patterns = element.attrib['pattern'].split('||')
+                patterns = set((x.rstrip('/*') for x in patterns))
+                patterns = [y[2] for y in (x.partition(':') for x in patterns)]
+
+                for pattern in patterns:
+                    ret[pattern] = element.attrib['name']
+        return ret
+
+    def make_yaml_from_project(self):
+        """make yaml from project"""
+        colours = self.parse_existing_files()
+        file_colors = self.parse_existing_colous()
+        # file_colors[None] = file_colors[self.name]
+
+        new_file_colors = {}
+        new_file_colors[None] = file_colors[self.name]
+        del file_colors[self.name]
+        for k, v in sorted(file_colors.items()):
+            new_file_colors[k] = v
+        file_colors = new_file_colors
+
+        def tr(s):
+            return s.replace("!!null '': ", "~: ")
+
+        # d = {'colors': colours, 'items': file_colors}
+        #with open('output.yml', 'w') as outfile:
+        yaml = YAML()
+        # s2 = yaml.dump({'items': file_colors}, transform=tr)
+        with open('output.yml', 'w') as outfile:
+            yaml.dump({'colors': colours}, stream=outfile, transform=tr)
+        with open('output.yml', 'a') as outfile:
+            outfile.write('\n')
+            yaml.dump({'items': file_colors}, outfile, transform=tr)
+
+            # outfile.write(f'{s1}\n{s2}')
+
+
+
+
+
+
+
+
+
+
 
     def iter_scope_files(self):
         for file in (self.idea_dir / 'scopes').iterdir():
-            if file.is_file() and file.name in ['charmer_one.xml']:
+            if file.is_file():
                 yield file
 
 

@@ -1,6 +1,9 @@
+import pytest
+
 from charmer.main import Project
 
 
+@pytest.mark.skip
 def test_project():
     p = Project()
     ret = p.parse_existing_files()
@@ -16,11 +19,15 @@ def test_project():
         'config.yml': 'e4ffce'}
     assert expected == ret
 
-
+@pytest.mark.skip()
 def test_file_colours():
     p = Project()
     ret = p.parse_existing_colous()
     print(ret)
 
+
+def test_gen_yaml():
+    p = Project()
+    p.make_yaml_from_project()
 
 
