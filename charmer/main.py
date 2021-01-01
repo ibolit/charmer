@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 import yaml
 import click
+from xml.etree import ElementTree as et
 
 
 class Charmer:
@@ -14,13 +15,10 @@ class Charmer:
         self.predefined_patterns = None
         self.parse_config(config)
 
-
     def parse_config(self, config):
         with open(config) as infile:
             self.config = yaml.load(infile)
-
         self.predefined_patterns = self.get_predefined_patterns()
-
 
     def get_predefined_patterns(self):
         ret = []
@@ -32,7 +30,6 @@ class Charmer:
             for folder in definitions.get("folders", []):
                 ret.append(folder)
         return ret
-
 
     def make_scopes(self):
         colors = self.config.get("_other_colors")
@@ -50,7 +47,6 @@ class Charmer:
                 counter += 1
                 counter = counter % len(colors)
 
-
     def make_predefined_scopes(self):
         for scope_name, definitions in self.config.items():
             if scope_name.startswith("_"):
@@ -64,13 +60,11 @@ class Charmer:
                 self.file_colors.add_color(definitions["color"], for_scope=scope_name)
             scope.write_scope()
 
-
     def special_definitions(self, scope_name, definitions):
         if scope_name == "_home":
             definitions["folders"] = [self.project.name]
         else:
             definitions = None
-
         return definitions
 
 
@@ -80,27 +74,15 @@ class Project:
         if not self.is_project():
             raise RuntimeError("Current directory is not a pycharm or idea project")
         self.name = self.get_project_name()
-
         self.idea_dir = self.root / ".idea"
         self.scopes_dir = self.idea_dir / "scopes"
         self.scopes_dir.mkdir(exist_ok=True)
-
 
     def is_project(self):
         for f in self.root.iterdir():
             if f.name == ".idea" and f.is_dir():
                 return True
         return False
-
-
-    def null(self, bad):
-        return bad
-
-    def etc(self, good):
-        return good
-
-    def opt(self, three):
-        return three
 
     def get_project_name(self):
         try:
@@ -109,6 +91,37 @@ class Project:
                 return name_file.read().strip()
         except FileNotFoundError:
             return self.root.name
+
+    def parse_existing_files(self):
+        """Find existing scopes and colours and read them in"""
+        try:
+            xml = et.parse(self.idea_dir / 'fileColors.xml')
+        except FileNotFoundError:
+            return {}
+        ret = {}
+        root = xml.getroot()
+        for element in root.findall('component'):
+            if element.attrib.get('name') != 'SharedFileColors':
+                continue
+            for colour in element.findall('fileColor'):
+                ret[colour.attrib['scope']] = colour.attrib['color']
+        return ret
+
+    def parse_existing_colous(self):
+        for file in self.iter_scope_files():
+            xml = et.parse(file)
+            root = xml.getroot()
+            for element in root.findall('scope'):
+                print('name', element.attrib['name'])
+
+    def iter_scope_files(self):
+        for file in (self.idea_dir / 'scopes').iterdir():
+            if file.is_file() and file.name in ['charmer_one.xml']:
+                yield file
+
+
+
+
 
 
 class Scope:
@@ -119,7 +132,6 @@ class Scope:
         self.xml = """<component name="DependencyValidationManager">
       <scope name="{name}" pattern="{pattern}" />
     </component>"""
-
 
     def add_entry(self, path):
         if isinstance(path, Path):
@@ -133,7 +145,6 @@ class Scope:
         if isinstance(rel_path, str) or rel_path.is_dir():
             self._add_pattern(rel_path, recursive=True)
 
-
     def _add_pattern(self, rel_path, recursive=False):
         pattern = "file[{project_name}]:{path}".format(
             project_name=self.project.name, path=rel_path
@@ -141,7 +152,6 @@ class Scope:
         if recursive:
             pattern = "{}//*".format(pattern)
         self.patterns.append(pattern)
-
 
     def write_scope(self):
         scope_savable_name = re.sub("^\.", "_", self.name)
@@ -197,4 +207,4 @@ def main(config):
 
 
 if __name__ == "__main__":
-    main("None")
+    main(None)
