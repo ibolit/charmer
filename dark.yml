@@ -1,0 +1,15 @@
+one:
+  folders:
+    - hello
+    - .venv
+  color: 404133
+_home:
+  color: 413a33
+_other_colors:
+  - 413333
+  - 41333f
+  - 343341
+  - 334041
+  - 334137
+  - 404133
+  - 413a33

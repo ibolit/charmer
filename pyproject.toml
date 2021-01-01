@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "charmer"
+version = "0.1.0"
+description = "A tool to set file and folder colours in Idea projects"
+authors = ["Timofey Danshin <t.danshin@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+click = "^7.1.2"
+PyYAML = "^5.3.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
