@@ -195,16 +195,29 @@ class FileColors:
             ))
 
 
-@click.command(
-    "charmer",
-    help="Add colour to the files and folders in your PyCharm project "
-         "using the specified CONFIG"
+@click.group(
+    'charmer',
+    help='Add colour to the files and folders in your PyCharm project '
+         'using the specified CONFIG'
 )
-@click.argument("config", type=click.Path())
-def main(config):
-    c = Charmer(config)
-    c.prepare_scopes()
+@click.argument('config', type=click.Path())
+@click.pass_context
+def cli(ctx, config):
+    ctx.ensure_object(dict)
+    ctx.obj['app'] = Charmer(config)
+
+
+@cli.command(help='Generate the pycharm xml configs')
+@click.pass_context
+def charm(ctx):
+    ctx.obj['app'].prepare_scopes()
+
+
+@cli.command(help='Check the config file')
+@click.pass_context
+def check(ctx):
+    ctx.obj['app'].check_config()
 
 
 if __name__ == "__main__":
-    main(None)
+    cli(obj={})
