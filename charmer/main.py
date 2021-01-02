@@ -18,6 +18,27 @@ class Charmer:
             yaml = YAML()
             return yaml.load(infile)
 
+    def check_config(self):
+        disk_items = [x.name for x in self.project.root.iterdir()]
+        conf_items = self.config.get('items', {})
+        if None in conf_items:
+            conf_items[self.project.name] = None
+            del conf_items[None]
+            del conf_items['Problems']
+            del conf_items['Non-Project Files']
+        conf_items = list(conf_items.keys())
+
+        missing_on_disk = set()
+
+        for item in conf_items:
+            if item not in disk_items:
+                missing_on_disk.add(item)
+
+        print('Items in config and not on disk')
+        for i in missing_on_disk:
+            print(f'    • {i}')
+
+
     def prepare_scopes(self):
         file_colors = FileColors(self.project)
         colors = self.config.get('colors', {})
