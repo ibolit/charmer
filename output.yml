@@ -1,0 +1,23 @@
+colors:
+  one: '404133'
+  problems: ff0000
+  ignored: eaeaea
+  _home: 413a33
+  charmer.egg-info: '413333'
+  charmer: 41333f
+  tests: '343341'
+  setup.py: '334041'
+  config.yml: '334137'
+  dark.yml: '404133'
+
+items:
+  ~: _home
+  Problems: problems
+  Non-Project Files: ignored
+  .venv: one
+  charmer.egg-info: charmer.egg-info
+  config.yml: config.yml
+  dark.yml: dark.yml
+  hello: one
+  setup.py: setup.py
+  tests: tests

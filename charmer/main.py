@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+from collections import defaultdict
 from pathlib import Path
 from ruamel.yaml import YAML
 import click
@@ -8,64 +9,35 @@ from xml.etree import ElementTree as et
 
 class Charmer:
     def __init__(self, config):
-        self.config = None
         self.project = Project()
-        self.file_colors = FileColors(self.project)
-        # self.file_colors = None
         self.predefined_patterns = None
-        self.parse_config(config)
+        self.config = self.parse_config(config)
 
     def parse_config(self, config):
         with open(config) as infile:
-            self.config = yaml.load(infile)
-        self.predefined_patterns = self.get_predefined_patterns()
+            yaml = YAML()
+            return yaml.load(infile)
 
-    def get_predefined_patterns(self):
-        ret = []
-        for scope_name, definitions in self.config.items():
-            if scope_name.startswith("_"):
-                if scope_name == "_home":
-                    ret.append(self.project.name)
+    def prepare_scopes(self):
+        file_colors = FileColors(self.project)
+        colors = self.config.get('colors', {})
+        colors['default'] = 'ff5555'
+        ret = defaultdict(list)
+        for file_path, color in self.config.get('items', {}).items():
+            color_key = color if color in colors else 'default'
+            if file_path is None:
+                file_path = self.project.name
+            if file_path in ['Problems', 'Non-Project Files']:
+                file_colors.add_color(colors[color], for_scope=file_path)
                 continue
-            for folder in definitions.get("folders", []):
-                ret.append(folder)
-        return ret
 
-    def make_scopes(self):
-        colors = self.config.get("_other_colors")
-        if not colors:
-            return
-        counter = 0
-        for f in Path.iterdir(self.project.root):
-            if f.name.startswith("."):
-                continue
-            if f not in self.predefined_patterns:
-                scope = Scope(f.name, self.project)
-                scope.add_entry(f)
-                self.file_colors.add_color(colors[counter], for_scope=scope.name)
-                scope.write_scope()
-                counter += 1
-                counter = counter % len(colors)
+            ret[color_key].append(file_path)
 
-    def make_predefined_scopes(self):
-        for scope_name, definitions in self.config.items():
-            if scope_name.startswith("_"):
-                definitions = self.special_definitions(scope_name, definitions)
-                if not definitions:
-                    continue
-            scope_name = "charmer_{}".format(scope_name)
-            scope = Scope(scope_name, self.project)
-            for folder in definitions["folders"]:
-                scope.add_entry(folder)
-                self.file_colors.add_color(definitions["color"], for_scope=scope_name)
+        for color_name, paths in ret.items():
+            scope = Scope(color_name, self.project, paths)
             scope.write_scope()
-
-    def special_definitions(self, scope_name, definitions):
-        if scope_name == "_home":
-            definitions["folders"] = [self.project.name]
-        else:
-            definitions = None
-        return definitions
+            file_colors.add_color(colors[color_name], for_scope=scope.name)
+        file_colors.write()
 
 
 class Project:
@@ -104,7 +76,7 @@ class Project:
             if element.attrib.get('name') != 'SharedFileColors':
                 continue
             for colour in element.findall('fileColor'):
-                ret[colour.attrib['scope']] = colour.attrib['color']
+                ret[self.remove_project_name(colour.attrib['scope'])] = colour.attrib['color']
         return ret
 
     def parse_existing_colous(self):
@@ -119,14 +91,16 @@ class Project:
                 patterns = [y[2] for y in (x.partition(':') for x in patterns)]
 
                 for pattern in patterns:
-                    ret[pattern] = element.attrib['name']
+                    ret[pattern] = self.remove_project_name(element.attrib['name'])
         return ret
+
+    def remove_project_name(self, s):
+        return s.replace(f'{self.name}_', '')
 
     def make_yaml_from_project(self):
         """make yaml from project"""
         colours = self.parse_existing_files()
         file_colors = self.parse_existing_colous()
-        # file_colors[None] = file_colors[self.name]
 
         new_file_colors = {}
         new_file_colors[None] = file_colors[self.name]
@@ -136,29 +110,18 @@ class Project:
         file_colors = new_file_colors
 
         def tr(s):
-            return s.replace("!!null '': ", "~: ")
+            lines = s.split('\n')
+            for i, line in enumerate(lines[1:], start=1):
+                if (not line.startswith(' ')) and i < len(lines) - 1:
+                    lines[i] = f'\n{line}'
+                else:
+                    lines[i] = line.replace("!!null '': ", "~: ")
+            return '\n'.join(lines)
 
-        # d = {'colors': colours, 'items': file_colors}
-        #with open('output.yml', 'w') as outfile:
+        d = {'colors': colours, 'items': file_colors}
         yaml = YAML()
-        # s2 = yaml.dump({'items': file_colors}, transform=tr)
         with open('output.yml', 'w') as outfile:
-            yaml.dump({'colors': colours}, stream=outfile, transform=tr)
-        with open('output.yml', 'a') as outfile:
-            outfile.write('\n')
-            yaml.dump({'items': file_colors}, outfile, transform=tr)
-
-            # outfile.write(f'{s1}\n{s2}')
-
-
-
-
-
-
-
-
-
-
+            yaml.dump(d, stream=outfile, transform=tr)
 
     def iter_scope_files(self):
         for file in (self.idea_dir / 'scopes').iterdir():
@@ -166,18 +129,18 @@ class Project:
                 yield file
 
 
-
-
-
-
 class Scope:
-    def __init__(self, name, project):
+    def __init__(self, name, project, paths):
         self.patterns = []
-        self.name = name
+        self.name = "charmer_{}".format(name)
+        # Remove project from here and maybe add scopes to the project
         self.project = project
         self.xml = """<component name="DependencyValidationManager">
       <scope name="{name}" pattern="{pattern}" />
-    </component>"""
+</component>"""
+        self.special = False
+        for path in paths:
+            self.add_entry(path)
 
     def add_entry(self, path):
         if isinstance(path, Path):
@@ -186,16 +149,14 @@ class Scope:
                 print("Folder not inside the project: {}".format(rel_path))
         else:
             rel_path = path
-
         self._add_pattern(rel_path)
-        if isinstance(rel_path, str) or rel_path.is_dir():
-            self._add_pattern(rel_path, recursive=True)
 
-    def _add_pattern(self, rel_path, recursive=False):
+    def _add_pattern(self, rel_path):
         pattern = "file[{project_name}]:{path}".format(
             project_name=self.project.name, path=rel_path
         )
-        if recursive:
+        self.patterns.append(pattern)
+        if isinstance(rel_path, str) or rel_path.is_dir():
             pattern = "{}//*".format(pattern)
         self.patterns.append(pattern)
 
@@ -212,23 +173,18 @@ class FileColors:
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SharedFileColors">
-    <fileColor scope="Problems" color="Rose" />
-    <fileColor scope="Non-Project Files" color="eaeaea" />
 {}
   </component>
 </project>
     """
-
     colour_entry = '    <fileColor scope="{}" color="{}" />'
 
     def __init__(self, project):
         self.project = project
         self.colors = {}
 
-
     def add_color(self, color, *, for_scope):
         self.colors[for_scope] = color
-
 
     def write(self):
         with open(self.project.idea_dir/"fileColors.xml", "w") as outfile:
@@ -247,9 +203,7 @@ class FileColors:
 @click.argument("config", type=click.Path())
 def main(config):
     c = Charmer(config)
-    c.make_predefined_scopes()
-    c.make_scopes()
-    c.file_colors.write()
+    c.prepare_scopes()
 
 
 if __name__ == "__main__":

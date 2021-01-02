@@ -1,0 +1,20 @@
+colors:
+  problems: ff0000
+  ignored: eaeaea
+  _home: 413a33
+  one: '404133'
+  two: '413333'
+  three: 41333f
+  four: '343341'
+  five: '334041'
+  six: '334137'
+
+items:
+  ~: _home
+  .venv: one
+  Problems: problems
+  Non-Project Files: ignored
+  tests: three
+  .gitignore: one
+  config.yml: six
+  dark.yml: four
