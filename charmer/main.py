@@ -8,24 +8,24 @@ from xml.etree import ElementTree as et
 
 
 class Charmer:
-    def __init__(self, config):
+    def __init__(self):
         self.project = Project()
         self.predefined_patterns = None
-        self.config = self.parse_config(config)
 
     def parse_config(self, config):
         with open(config) as infile:
             yaml = YAML()
             return yaml.load(infile)
 
-    def check_config(self):
+    def check_config(self, config):
+        config = self.parse_config(config)
         disk_items = [x.name for x in self.project.root.iterdir()]
-        conf_items = self.config.get('items', {})
+        conf_items = config.get('items', {})
         if None in conf_items:
             conf_items[self.project.name] = None
-            del conf_items[None]
-            del conf_items['Problems']
-            del conf_items['Non-Project Files']
+            conf_items.pop(None, None)
+            conf_items.pop('Problems', None)
+            conf_items.pop('Non-Project Files', None)
         conf_items = list(conf_items.keys())
 
         missing_on_disk = set()
@@ -38,13 +38,13 @@ class Charmer:
         for i in missing_on_disk:
             print(f'    • {i}')
 
-
-    def prepare_scopes(self):
+    def prepare_scopes(self, config):
+        config = self.parse_config(config)
         file_colors = FileColors(self.project)
-        colors = self.config.get('colors', {})
+        colors = config.get('colors', {})
         colors['default'] = 'ff5555'
         ret = defaultdict(list)
-        for file_path, color in self.config.get('items', {}).items():
+        for file_path, color in config.get('items', {}).items():
             color_key = color if color in colors else 'default'
             if file_path is None:
                 file_path = self.project.name
@@ -59,6 +59,21 @@ class Charmer:
             scope.write_scope()
             file_colors.add_color(colors[color_name], for_scope=scope.name)
         file_colors.write()
+
+    def export(self, config):
+        d = self.project.make_yaml_from_project()
+        yaml = YAML()
+        def tr(s):
+            lines = s.split('\n')
+            for i, line in enumerate(lines[1:], start=1):
+                if (not line.startswith(' ')) and i < len(lines) - 1:
+                    lines[i] = f'\n{line}'
+                else:
+                    lines[i] = line.replace("!!null '': ", "~: ")
+            return '\n'.join(lines)
+
+        with open(config, 'w') as outfile:
+            yaml.dump(d, stream=outfile, transform=tr)
 
 
 class Project:
@@ -130,19 +145,7 @@ class Project:
             new_file_colors[k] = v
         file_colors = new_file_colors
 
-        def tr(s):
-            lines = s.split('\n')
-            for i, line in enumerate(lines[1:], start=1):
-                if (not line.startswith(' ')) and i < len(lines) - 1:
-                    lines[i] = f'\n{line}'
-                else:
-                    lines[i] = line.replace("!!null '': ", "~: ")
-            return '\n'.join(lines)
-
-        d = {'colors': colours, 'items': file_colors}
-        yaml = YAML()
-        with open('output.yml', 'w') as outfile:
-            yaml.dump(d, stream=outfile, transform=tr)
+        return {'colors': colours, 'items': file_colors}
 
     def iter_scope_files(self):
         for file in (self.idea_dir / 'scopes').iterdir():
@@ -221,23 +224,31 @@ class FileColors:
     help='Add colour to the files and folders in your PyCharm project '
          'using the specified CONFIG'
 )
-@click.argument('config', type=click.Path())
 @click.pass_context
-def cli(ctx, config):
+def cli(ctx):
     ctx.ensure_object(dict)
-    ctx.obj['app'] = Charmer(config)
+    ctx.obj['app'] = Charmer()
 
 
 @cli.command(help='Generate the pycharm xml configs')
+@click.argument('config', type=click.Path())
 @click.pass_context
-def charm(ctx):
-    ctx.obj['app'].prepare_scopes()
+def charm(ctx, config):
+    ctx.obj['app'].prepare_scopes(config)
 
 
 @cli.command(help='Check the config file')
 @click.pass_context
-def check(ctx):
-    ctx.obj['app'].check_config()
+@click.argument('config', type=click.Path())
+def check(ctx, config):
+    ctx.obj['app'].check_config(config)
+
+
+@cli.command(help="Generate config file from project's xmls")
+@click.pass_context
+@click.argument('config', type=click.Path())
+def export(ctx, config):
+    ctx.obj['app'].export(config)
 
 
 if __name__ == "__main__":
