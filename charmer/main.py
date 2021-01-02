@@ -2,6 +2,9 @@
 import re
 from collections import defaultdict
 from pathlib import Path
+
+from click import echo, secho
+from colour import Color
 from ruamel.yaml import YAML
 import click
 from xml.etree import ElementTree as et
@@ -34,9 +37,9 @@ class Charmer:
             if item not in disk_items:
                 missing_on_disk.add(item)
 
-        print('Items in config and not on disk')
+        secho('Items in config and not on disk', fg='red', err=True)
         for i in missing_on_disk:
-            print(f'    • {i}')
+            echo(i)
 
     def prepare_scopes(self, config):
         config = self.parse_config(config)
@@ -249,6 +252,21 @@ def check(ctx, config):
 @click.argument('config', type=click.Path())
 def export(ctx, config):
     ctx.obj['app'].export(config)
+
+
+@cli.command(
+    help='Generate hex colour values, same saturation and luminance, different hues. '
+         'The hues are equally spaced.')
+@click.argument('hex_color', type=click.STRING)
+@click.option('--points', default=10, help='How many colour values to generate')
+def make_colors(hex_color, points):
+    c = Color(f'#{hex_color}')
+    for i in range(points):
+        hue = c.hue + i / points
+        if hue > 1:
+            hue = hue - 1
+        cl = Color(hue=hue, saturation=c.saturation, luminance=c.luminance)
+        echo(cl.hex_l[1:])
 
 
 if __name__ == "__main__":
