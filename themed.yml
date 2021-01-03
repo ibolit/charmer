@@ -1,0 +1,13 @@
+themes:
+  light:
+    one: ff00ee
+    two: 3399ff
+
+  dark:
+    one: 223300
+    two: 3345ff
+
+items:
+  ~: one # set the colour to the home folder (same name as root) by name
+  .venv: two # set colour to a folder by colour value
+  .pytest_cache: ~ # Do not set a colour to this folder

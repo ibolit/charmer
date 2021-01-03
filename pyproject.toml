@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "bobros"
+version = "0.2.0"
+description = "A tool to set file and folder colours in Idea projects"
+authors = ["Timofey Danshin <t.danshin@gmail.com>"]
+readme = 'README.md'
+
+[tool.poetry.scripts]
+bobros = "bobros.main:entry_point"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+click = "^7.1.2"
+PyYAML = "^5.3.1"
+"ruamel.yaml" = "^0.16.12"
+colour = "^0.1.5"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

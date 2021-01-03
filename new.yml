@@ -1,0 +1,13 @@
+colors: # give colours names
+  one: 223300
+  two: 3345ff
+
+items:
+  ~: one # set the colour to the home folder (same name as root) by name
+  .venv: 404133 # set colour to a folder by colour value
+  .pytest_cache: ~ # Do not set a colour to this folder
+
+
+generators: # generators for items that are not expressly mentioned
+  two: # starting colour
+    points: 10 # how many colours to generate
