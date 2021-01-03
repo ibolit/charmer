@@ -1,6 +1,6 @@
 import pytest
 
-from charmer.main import Project
+from bobros.main import Project
 
 
 @pytest.mark.skip
