@@ -41,11 +41,11 @@ class Charmer:
         for i in missing_on_disk:
             echo(i)
 
-    def prepare_scopes(self, config):
+    def prepare_scopes(self, config, theme=None):
         config = self.parse_config(config)
         file_colors = FileColors(self.project)
-        colors = config.get('colors', {})
-        colors['default'] = 'ff5555'
+        colors = self.get_colors(config, theme)
+        print(colors)
         ret = defaultdict(list)
         for file_path, color in config.get('items', {}).items():
             color_key = color if color in colors else 'default'
@@ -62,6 +62,23 @@ class Charmer:
             scope.write_scope()
             file_colors.add_color(colors[color_name], for_scope=scope.name)
         file_colors.write()
+
+    def get_colors(self, config, theme):
+        has_themes = 'themes' in config
+        if theme is not None and not has_themes:
+            raise RuntimeError('Theme option provided, but config does NOT contain themes')
+        if theme is None and has_themes:
+            raise RuntimeError('Theme option NOT provided, but config contains themes')
+        if theme:
+            try:
+                colors = config['themes'][theme]
+            except KeyError:
+                raise RuntimeError(f'{theme}: Theme not found in config')
+        else:
+            colors = config.get('colors', {})
+        if 'default' not in colors:
+            colors['default'] = 'ff5555'
+        return colors
 
     def export(self, config):
         d = self.project.make_yaml_from_project()
@@ -225,7 +242,7 @@ class FileColors:
 @click.group(
     'charmer',
     help='Add colour to the files and folders in your PyCharm project '
-         'using the specified CONFIG'
+         'using the specified CONFIG.'
 )
 @click.pass_context
 def cli(ctx):
@@ -233,11 +250,17 @@ def cli(ctx):
     ctx.obj['app'] = Charmer()
 
 
-@cli.command(help='Generate the pycharm xml configs')
+@cli.command(help='Generate the pycharm xml configs.')
 @click.argument('config', type=click.Path())
+@click.option('-t', '--theme', type=click.STRING, help='Which theme to use. Config must specify themes.')
 @click.pass_context
-def charm(ctx, config):
-    ctx.obj['app'].prepare_scopes(config)
+def charm(ctx, config, theme):
+    try:
+        ctx.obj['app'].prepare_scopes(config, theme)
+    except (KeyboardInterrupt, InterruptedError):
+        raise
+    except RuntimeError as e:
+        echo('; '.join((str(x) for x in e.args)), err=True)
 
 
 @cli.command(help='Check the config file')

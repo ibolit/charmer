@@ -1,0 +1,40 @@
+themes:
+  light:
+    problems: ff0000
+    ignored: eaeaea
+    one: b1e3be
+    two: b1e3dc
+    three: b1cce3
+    four: b4b1e3
+    five: d2b1e3
+    six: e3b1d6
+    seven: e3b1b8
+    eight: e3c8b1
+    nine: e0e3b1
+    ten: c2e3b1
+
+  dark:
+    problems: ff0000
+    ignored: eaeaea
+    one: 404133
+    two: 384133
+    three: 334137
+    four: 33413f
+    five: 333a41
+    six: 343341
+    seven: 3c3341
+    eight: 41333d
+    nine: 413335
+    ten: 413a33
+
+items:
+  ~: ten
+  Problems: problems
+  Non-Project Files: ignored
+  tests: three
+  .gitignore: one
+  config.yml: six
+  dark.yml: four
+  output.yml: eight
+  poetry.lock: ten
+  pyproject.toml: ten
