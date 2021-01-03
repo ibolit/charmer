@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bobros"
-version = "0.1.0"
+version = "0.1.1"
 description = "A tool to set file and folder colours in Idea projects"
 authors = ["Timofey Danshin <t.danshin@gmail.com>"]
 readme = 'README.md'
