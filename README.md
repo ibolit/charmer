@@ -2,6 +2,11 @@ Bobros
 ======
 _Making your life a bit more beautiful_
 
+```shell
+pip install bobros
+bobros --help
+```
+
 `bobros` is a tool for setting the background colour for files in PyCharm project
 navigator.
 
@@ -19,7 +24,7 @@ of clicking and typing. Well, there must be a better way!
 Bobros takes a simple config and generates the correct xml files to make your
 project files colour-coded. It also supports different colour-themes. 
 
-Sample config file::
+Sample config file (i.e. `my_config.yml`):
 ```yaml    
 themes:
     dark: # defines colours for a theme named "dark", names can be arbitrary
@@ -43,3 +48,56 @@ Some special values:
 
 * `Problems`, `Non-Project Files` special names used by Idea for files/folders
   containing errors or not belonging to the current project
+  
+To apply a theme in a config, run the following from the root folder of your
+project:
+
+```shell
+bobros charm my_config.yml -t dark
+```
+
+You could also have a less fancy config, without themes:
+
+```yaml    
+colors:
+    one: aabb00
+    two: bbaa00
+
+items:
+    my_file.py: one
+    my_file_2.py: two
+    my_folder: one
+```
+
+To apply this config, run 
+
+```shell
+bobros charm my_config.yml
+```
+
+It is an error to try to apply a config with themes and not providing a theme
+name on the command line (i.e. the `-t` option), to specify a non-existing 
+theme or to use a config without themes and providing the `-t` option on the 
+command line.
+
+Generating colours
+------------------
+I like my files to have colours of the same saturation and luminance, but 
+of different hues, so bobros has a command to generate such colours from a
+given initial colour: 
+
+```shell
+bobros make-colors b1e3be --points 10
+```
+
+This will generate 10 such colours, you can then copy the values to your 
+config file and assign them to your items.
+
+Checking configs
+----------------
+You can run 
+```shell
+bobross check my_config.yml
+```
+from the root of a PyCharm (or Idea) project. For now, it will check if the 
+config specifies files that do not exist in the actual project.

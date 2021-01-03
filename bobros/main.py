@@ -292,5 +292,9 @@ def make_colors(hex_color, points):
         echo(cl.hex_l[1:])
 
 
-if __name__ == "__main__":
+def entry_point():
     cli(obj={})
+
+
+if __name__ == "__main__":
+    entry_point()
